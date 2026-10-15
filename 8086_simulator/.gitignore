@@ -1,2 +1,5 @@
 build
 .cache
+.idea
+/__cmake_systeminformation/
+/cmake-build-debug/
