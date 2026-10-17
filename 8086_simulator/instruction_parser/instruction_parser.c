@@ -98,24 +98,37 @@ static size_t parse_reg_mem_to_reg_(uint8_t *stream, const char *mnemonic_str, c
     uint8_t r_m         = lsb & 0b00000111;
 
     const char *reg_str = NULL;
-    const char *r_m_str = NULL;
+    char r_m_str[20];
+    int16_t add_sum = -1;
 
     switch (mod)
     {
     case 0:
-        reg_str   = register_table[w][reg];
-        r_m_str   = effective_address_table[r_m];
+        reg_str = register_table[w][reg];
+        snprintf(r_m_str, 20, "[%s]", effective_address_table[r_m]);
         inst_size = 2;
         break;
     case 1:
+        reg_str = register_table[w][reg];
+        if (r_m == 6)
+        {
+            snprintf(r_m_str, 20, "[%s]", effective_address_table[r_m]);
+            inst_size = 3;
+            break;
+        }
+        add_sum = (int8_t)stream[2];
+        snprintf(r_m_str, 20, "[%s + %u]", effective_address_table[r_m], add_sum);
         inst_size = 3;
         break;
     case 2:
+        reg_str = register_table[w][reg];
+        add_sum = (stream[3] << 8) | stream[2];
+        snprintf(r_m_str, 20, "[%s + %u]", effective_address_table[r_m], add_sum);
         inst_size = 4;
         break;
     case 3:
-        reg_str   = register_table[w][reg];
-        r_m_str   = register_table[w][r_m];
+        reg_str = register_table[w][reg];
+        snprintf(r_m_str, 20, "%s", effective_address_table[r_m]);
         inst_size = 2;
         break;
     default:
@@ -123,8 +136,8 @@ static size_t parse_reg_mem_to_reg_(uint8_t *stream, const char *mnemonic_str, c
         break;
     }
 
-    const char *mem_str_1;
-    const char *mem_str_2;
+    const char *mem_str_1 = NULL;
+    const char *mem_str_2 = NULL;
     if (d == 1)
     {
         mem_str_1 = reg_str;
@@ -136,18 +149,11 @@ static size_t parse_reg_mem_to_reg_(uint8_t *stream, const char *mnemonic_str, c
         mem_str_2 = reg_str;
     }
 
-    if (reg_str != NULL && r_m_str != NULL)
-        if (mod == 3)
-        {
-            snprintf(inst_buffer, buffer_size, "%s %s, %s", mnemonic_str, mem_str_1, mem_str_2);
-        }
-        else
-        {
-            snprintf(inst_buffer, buffer_size, "%s %s, [%s]", mnemonic_str, mem_str_1, mem_str_2);
-        }
+    if (mem_str_1 != NULL && mem_str_2 != NULL)
+        snprintf(inst_buffer, buffer_size, "%s %s, %s", mnemonic_str, mem_str_1, mem_str_2);
     else
-        snprintf(inst_buffer, buffer_size, "%s (memory operands not yet implemented)",
-                 mnemonic_str);
+        snprintf(inst_buffer, buffer_size, "memory operands not yet implemented");
+
     return inst_size;
 }
 
